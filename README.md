@@ -1,5 +1,5 @@
 # StarBall Adventure
-Star Ball Adventure is a modular 3D maze arcade game built with Three.js.  
+StarBall Adventure is a modular 3D maze arcade game built with Three.js.  
 Players control a rolling star ball, collect stars, avoid enemies, and progress through increasingly difficult levels.
 
 This project is designed with a professional modular structure and aims to evolve into a fully featured indie web game.
