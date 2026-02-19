@@ -11,4 +11,4 @@ In-game view:
 <br>
 <br>
 
-<p>This project is licensed under the Massachusetts Institute of Technology (MIT) - see the <a href="">LICENSE</a> file for details.</p>
+<p>This project is licensed under the Massachusetts Institute of Technology (MIT) - see the <a href="https://github.com/Kanzyone/StarBall-Adventure/blob/main/LICENSE">LICENSE</a> file for details.</p>
