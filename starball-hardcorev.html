@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star Ball Adventure: Dengeli Mücadele</title>
+    <title>Star Ball Adventure: Hardcore Edition</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
         
@@ -144,9 +144,9 @@
 
     <div id="ability-hud" style="display: none;">
         <div class="ability-box" id="abi-dash"><span class="ability-key">1</span><span>DASH</span><span class="ability-count" id="count-dash">0</span><div class="cooldown-overlay" id="cd-dash"></div></div>
-        <div class="ability-box" id="abi-shield"><span class="ability-key">2</span><span>KALKAN</span><span class="ability-count" id="count-shield">0</span><div class="cooldown-overlay" id="cd-shield"></div></div>
-        <div class="ability-box" id="abi-magnet"><span class="ability-key">3</span><span>MIKNATIS</span><span class="ability-count" id="count-magnet">0</span><div class="cooldown-overlay" id="cd-magnet"></div></div>
-        <div class="ability-box" id="abi-slow"><span class="ability-key">4</span><span>YAVAŞ</span><span class="ability-count" id="count-slow">0</span><div class="cooldown-overlay" id="cd-slow"></div></div>
+        <div class="ability-box" id="abi-shield"><span class="ability-key">2</span><span>SHIELD</span><span class="ability-count" id="count-shield">0</span><div class="cooldown-overlay" id="cd-shield"></div></div>
+        <div class="ability-box" id="abi-magnet"><span class="ability-key">3</span><span>MAGNET</span><span class="ability-count" id="count-magnet">0</span><div class="cooldown-overlay" id="cd-magnet"></div></div>
+        <div class="ability-box" id="abi-slow"><span class="ability-key">4</span><span>SLOW</span><span class="ability-count" id="count-slow">0</span><div class="cooldown-overlay" id="cd-slow"></div></div>
     </div>
 
     <div id="message">
@@ -177,27 +177,27 @@
         };
 
         const ballSkins = [
-            { id: 'classic', name: 'Klasik', colors: ['#ffcc00', '#0044cc'], price: 0 },
-            { id: 'ruby', name: 'Yakut Vuruş', colors: ['#aa0000', '#330000'], price: 100 },
-            { id: 'emerald', name: 'Zümrüt Orman', colors: ['#00ff44', '#002200'], price: 250 },
-            { id: 'galaxy', name: 'Galaksi Boşluk', colors: ['#110022', '#440088'], price: 500 },
-            { id: 'golden', name: 'Altın Efsane', colors: ['#ffd700', '#8b4513'], price: 1000 }
+            { id: 'classic', name: 'Classic', colors: ['#ffcc00', '#0044cc'], price: 0 },
+            { id: 'ruby', name: 'Ruby Strike', colors: ['#aa0000', '#330000'], price: 100 },
+            { id: 'emerald', name: 'Emerald Forest', colors: ['#00ff44', '#002200'], price: 250 },
+            { id: 'galaxy', name: 'Galaxy Void', colors: ['#110022', '#440088'], price: 500 },
+            { id: 'golden', name: 'Golden Legend', colors: ['#ffd700', '#8b4513'], price: 1000 }
         ];
 
         let unlockedSkins = JSON.parse(localStorage.getItem('starball_unlocked')) || ['classic'];
         let selectedSkin = localStorage.getItem('starball_skin') || 'classic';
         let abilityInventory = JSON.parse(localStorage.getItem('starball_inventory')) || { dash: 0, shield: 0, magnet: 0, slow: 0 };
 
-        // Seviye Zorluk Ayarları - Yeni Düzenleme
+        // Generate 20 levels with increasing difficulty
         const levels = [];
         for (let i = 0; i < 20; i++) {
+            let difficulty = i < 5 ? 0 : (i - 4);
             levels.push({
-                grid: 12, 
-                stars: 5 + (i * 2), 
-                // 8. seviyeden sonra düşman sayısını çok yavaş artırıyoruz, max 6 yaptık.
-                enemies: i < 8 ? (2 + Math.floor(i / 2)) : (5 + Math.floor((i-8) / 4)), 
-                // Hızları bir tık daha düşürdük (0.8'den 0.7'ye çekildi başlangıç, artış azaldı)
-                speedMult: 0.7 + (i * 0.025) 
+                grid: 9 + Math.floor(i / 4), 
+                stars: 5 + (i * 3), 
+                enemies: 1 + Math.floor(i / 1.5), // Düşman sayısı biraz daha artırıldı
+                tracking: true, // Artık her seviyede takip var
+                speedMult: 1.2 + (difficulty * 0.2) // Başlangıç hızı ve artış oranı artırıldı
             });
         }
 
@@ -217,8 +217,8 @@
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        const BALL_RADIUS = 1.6; 
-        const PLAYER_SPEED = 0.58; // Oyuncuyu biraz daha hızlandırdık ki daha rahat kaçsın
+        const BALL_RADIUS = 1.55; 
+        const PLAYER_SPEED = 0.5; 
         const DASH_MULTIPLIER = 3.5;
         const WALL_HEIGHT = 4.5;
         let offsetX, offsetZ;
@@ -335,6 +335,7 @@
             const grid = document.getElementById('level-grid');
             grid.innerHTML = '';
             levels.forEach((lvl, i) => {
+                // Kilitler tamamen kaldırıldı
                 const btn = document.createElement('button');
                 btn.className = 'menu-btn';
                 btn.style.cssText = 'min-width: 60px; padding: 15px; font-size: 18px; margin: 5px;';
@@ -465,28 +466,15 @@
             }
         }
 
-        function getSafePos(quadrant = -1) {
+        function getSafePos() {
             const lvl = levels[currentLevel-1];
-            const cols = baseMaze[0].length;
-            const rows = baseMaze.length;
-            let rx, rz, attempts = 0;
-            do {
-                if (quadrant === -1) {
-                    rx = Math.floor(Math.random() * cols);
-                    rz = Math.floor(Math.random() * rows);
-                } else {
-                    // Düşmanları daha geniş alanlara dağıtmak için
-                    const qCol = quadrant % 3; const qRow = Math.floor(quadrant / 3);
-                    rx = Math.floor(Math.random() * (cols/3)) + (qCol * Math.floor(cols/3));
-                    rz = Math.floor(Math.random() * (rows/3)) + (qRow * Math.floor(rows/3));
-                }
-                attempts++;
-            } while (baseMaze[rz][rx] !== 0 && attempts < 50);
+            let rx, rz;
+            do { rx = Math.floor(Math.random() * baseMaze[0].length); rz = Math.floor(Math.random() * baseMaze.length); } while (baseMaze[rz][rx] !== 0);
             return new THREE.Vector3(rx * lvl.grid - offsetX + lvl.grid/2, BALL_RADIUS, rz * lvl.grid - offsetZ + lvl.grid/2);
         }
 
         function createPlayer() {
-            player = new THREE.Group(); player.position.set(12 - offsetX + 6, BALL_RADIUS, 12 - offsetZ + 6); scene.add(player);
+            player = new THREE.Group(); player.position.copy(getSafePos()); scene.add(player);
             playerBall = new THREE.Group(); player.add(playerBall);
             const skin = ballSkins.find(s => s.id === selectedSkin);
             const top = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 32, 16, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshPhongMaterial({ color: skin.colors[0] }));
@@ -502,19 +490,17 @@
                 star.position.copy(getSafePos()).setY(2.2); star.rotation.x = Math.PI / 2; scene.add(star); stars.push(star);
             }
             for(let i=0; i < lvl.enemies; i++) {
-                const enemy = new THREE.Group(); 
-                enemy.position.copy(getSafePos(i % 9)); 
+                const enemy = new THREE.Group(); enemy.position.copy(getSafePos());
                 enemy.add(new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 32, 32), new THREE.MeshPhongMaterial({ color: 0x9900ee })));
                 const ice = new THREE.Mesh(new THREE.IcosahedronGeometry(BALL_RADIUS*1.3, 1), new THREE.MeshPhongMaterial({ color: 0x00ffff, transparent: true, opacity: 0 }));
                 enemy.add(ice);
                 enemy.userData = { 
-                    dir: new THREE.Vector3(1,0,0), 
+                    dir: new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), Math.random()*Math.PI*2), 
                     frozen: 0, 
                     ice: ice, 
-                    pathUpdateTimer: 0,
-                    // Düşman zekasını daha çeşitli yaptık
-                    intelligence: Math.random() > 0.5 ? 'hunter' : 'patrol',
-                    patrolTarget: getSafePos(i % 9)
+                    tracking: lvl.tracking,
+                    turnCooldown: 0,
+                    aggressive: Math.random() > 0.5 // Bazı düşmanlar daha agresif
                 };
                 scene.add(enemy); enemies.push(enemy);
             }
@@ -522,7 +508,7 @@
 
         function checkCollision(pos, radius = BALL_RADIUS) {
             const lvl = levels[currentLevel-1];
-            const m = radius + 0.2; 
+            const m = radius + 0.3;
             for (let z = 0; z < baseMaze.length; z++) {
                 for (let x = 0; x < baseMaze[0].length; x++) {
                     if (baseMaze[z][x] === 1) {
@@ -579,57 +565,68 @@
 
         function updateEnemies(dt) {
             const lvl = levels[currentLevel-1];
-            // Temel hızı bir tık düşürdük (0.28'den 0.25'e)
-            let enemySpeed = (0.25 + (currentLevel * 0.008)) * lvl.speedMult * (abilities.slow.active > 0 ? 0.3 : 1);
+            let baseSpeed = (0.35 + currentLevel*0.03) * lvl.speedMult * (abilities.slow.active > 0 ? 0.3 : 1);
             
             enemies.forEach(e => {
                 if (e.userData.frozen > 0) { e.userData.frozen -= dt; e.userData.ice.material.opacity = 0.7; return; }
                 e.userData.ice.material.opacity = 0;
                 
                 const prev = e.position.clone();
-                e.userData.pathUpdateTimer -= dt;
+                const distToPlayer = player.position.distanceTo(e.position);
+                
+                // Agresiflik bonus hızı
+                let enemySpeed = baseSpeed;
+                if (e.userData.aggressive && distToPlayer < 40) enemySpeed *= 1.3;
 
-                if (e.userData.pathUpdateTimer <= 0) {
-                    let target = player.position;
-                    
-                    if (e.userData.intelligence === 'patrol' && e.position.distanceTo(player.position) > 45) {
-                        if (e.position.distanceTo(e.userData.patrolTarget) < 5) {
-                            e.userData.patrolTarget = getSafePos(Math.floor(Math.random()*9));
+                // Pathfinding Geliştirme: Direkt takip
+                if (e.userData.tracking && distToPlayer < 80) {
+                    if (e.userData.turnCooldown <= 0) {
+                        const toPlayer = player.position.clone().sub(e.position).normalize();
+                        
+                        // 4 ana yön testi
+                        const directions = [
+                            new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0),
+                            new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1)
+                        ];
+                        
+                        // Oyuncuya en yakın açıyı veren yönü bul
+                        directions.sort((a, b) => b.dot(toPlayer) - a.dot(toPlayer));
+                        
+                        for (let dir of directions) {
+                            const testPos = e.position.clone().add(dir.clone().multiplyScalar(lvl.grid * 0.4));
+                            if (!checkCollision(testPos, BALL_RADIUS * 0.7)) {
+                                e.userData.dir.lerp(dir, 0.4); // Yön değiştirme hızı artırıldı
+                                break;
+                            }
                         }
-                        target = e.userData.patrolTarget;
+                        e.userData.turnCooldown = 0.3; // Daha sık yön kontrolü
                     }
-
-                    const toTarget = target.clone().sub(e.position).normalize();
-                    const directions = [
-                        new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0),
-                        new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1)
-                    ];
-                    
-                    directions.sort((a, b) => b.dot(toTarget) - a.dot(toTarget));
-                    
-                    for (let dir of directions) {
-                        const testPos = e.position.clone().add(dir.clone().multiplyScalar(lvl.grid * 0.5));
-                        if (!checkCollision(testPos, BALL_RADIUS * 0.8)) {
-                            e.userData.dir.copy(dir);
+                }
+                
+                e.userData.turnCooldown -= dt;
+                e.position.add(e.userData.dir.clone().multiplyScalar(enemySpeed));
+                
+                // Engel çarpışması ve kaçınma
+                if (checkCollision(e.position)) {
+                    e.position.copy(prev);
+                    const angles = [Math.PI/2, -Math.PI/2, Math.PI];
+                    for(let a of angles) {
+                        let newDir = e.userData.dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), a);
+                        const testPos = e.position.clone().add(newDir.clone().multiplyScalar(lvl.grid * 0.4));
+                        if(!checkCollision(testPos)) {
+                            e.userData.dir.copy(newDir);
                             break;
                         }
                     }
-                    e.userData.pathUpdateTimer = 0.35 + (Math.random() * 0.25); 
-                }
-
-                e.position.add(e.userData.dir.clone().multiplyScalar(enemySpeed));
-                
-                if (checkCollision(e.position)) {
-                    e.position.copy(prev);
-                    e.userData.pathUpdateTimer = 0; 
+                    e.userData.turnCooldown = 0.1;
                 }
                 
-                if (!isGameOver && e.position.distanceTo(player.position) < 2.5) { 
+                if (!isGameOver && e.position.distanceTo(player.position) < 3.0) {
                     if (abilities.shield.active > 0) { 
                         abilities.shield.active = 0; 
                         player.remove(abilities.shield.mesh); 
-                        e.userData.frozen = 4.0; 
-                        e.position.add(e.position.clone().sub(player.position).normalize().multiplyScalar(10));
+                        e.userData.frozen = 2.0; 
+                        e.position.add(e.position.clone().sub(player.position).normalize().multiplyScalar(8));
                     }
                     else gameOver();
                 }
@@ -638,7 +635,7 @@
             for (let i = iceProjectiles.length - 1; i >= 0; i--) {
                 const p = iceProjectiles[i]; p.position.add(p.userData.vel);
                 if (checkCollision(p.position)) { scene.remove(p); iceProjectiles.splice(i, 1); continue; }
-                enemies.forEach(e => { if (p.position.distanceTo(e.position) < 3.0) { e.userData.frozen = 4.5; scene.remove(p); iceProjectiles.splice(i, 1); } });
+                enemies.forEach(e => { if (p.position.distanceTo(e.position) < 3.0) { e.userData.frozen = 4.0; scene.remove(p); iceProjectiles.splice(i, 1); } });
             }
         }
 
@@ -652,7 +649,7 @@
 
         function gameOver() { 
             isGameOver = true; 
-            document.getElementById('msg-content').innerHTML = `<span style="color:#ff3333">YAKALANDIN!</span><br><span style="font-size:16px;">Yeniden denemek ister misin?</span>`; 
+            document.getElementById('msg-content').innerHTML = `<span style="color:#ff3333">OYUN BİTTİ</span><br><span style="font-size:16px;">Yakaladılar!</span>`; 
             document.getElementById('next-lvl-btn').style.display = "none";
             document.getElementById('message').style.display = "block"; 
         }
