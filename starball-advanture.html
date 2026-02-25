@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star Ball Adventure: Pro Edition</title>
+    <title>Star Ball Adventure: Ability Edition</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #000; }
         
@@ -17,6 +17,24 @@
             position: absolute; top: 20px; right: 20px; color: #00ffcc;
             font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px #000;
             z-index: 110;
+        }
+
+        /* Ability HUD */
+        #ability-hud {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; z-index: 120; pointer-events: none;
+        }
+        .ability-box {
+            width: 60px; height: 60px; background: rgba(0,0,0,0.7);
+            border: 2px solid #555; border-radius: 10px; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            color: white; font-size: 10px; position: relative; overflow: hidden;
+        }
+        .ability-box.active { border-color: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
+        .ability-key { position: absolute; top: 2px; left: 4px; font-weight: bold; color: gold; }
+        .cooldown-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
+            background: rgba(255, 0, 0, 0.4); transition: height 0.1s linear;
         }
 
         /* Geri Dön Butonu Stil */
@@ -46,33 +64,23 @@
         }
         .menu-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px gold; }
         .menu-btn.secondary { background: linear-gradient(135deg, #00ccff, #0066ff); color: white; }
-        .menu-btn.lobby { background: linear-gradient(135deg, #666, #333); color: white; font-size: 16px; padding: 10px 25px; }
-
-        /* Level Grid */
-        #level-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-        .lvl-card { position: relative; text-align: center; }
-        .lvl-status { font-size: 12px; color: #00ff00; font-weight: bold; margin-bottom: 5px; height: 15px; }
 
         /* Shop Grid */
         #shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
         .shop-item {
             background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;
             text-align: center; border: 2px solid transparent; width: 140px;
-            transition: background 0.3s;
         }
         .shop-item.selected { border-color: gold; background: rgba(255,215,0,0.15); }
         .ball-preview {
             width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 15px;
-            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5), 0 5px 15px rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5);
         }
-        .price-tag { color: gold; font-weight: bold; display: block; margin-bottom: 10px; }
 
         #message {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             color: #fff; font-size: 32px; text-align: center; display: none;
-            text-shadow: 0 0 20px rgba(0,0,0,1); z-index: 200;
-            background: rgba(0,0,0,0.95); padding: 50px; border-radius: 20px; border: 4px solid gold;
+            background: rgba(0,0,0,0.95); padding: 50px; border-radius: 20px; border: 4px solid gold; z-index: 200;
         }
         #crosshair {
             position: absolute; top: 50%; left: 50%; width: 40px; height: 40px;
@@ -85,36 +93,61 @@
     <!-- Main Menu -->
     <div id="main-menu" class="overlay-screen">
         <h1 style="font-size: 50px; color: gold; margin-bottom: 30px; text-shadow: 0 0 20px orange;">STAR BALL ADVENTURE</h1>
-        <button class="menu-btn" onclick="showLevelSelect()">PLAY GAME</button>
-        <button class="menu-btn secondary" onclick="openShop()">STORE</button>
+        <button class="menu-btn" onclick="showLevelSelect()">OYNA</button>
+        <button class="menu-btn secondary" onclick="openShop()">MAĞAZA</button>
+        <div style="margin-top: 20px; font-size: 14px; color: #aaa;">Kontroller: WASD (Hareket), Space (FPS Modu), F (Ateş), <br> 1: Dash, 2: Shield, 3: Magnet, 4: Time Slow</div>
     </div>
 
     <!-- Level Select -->
     <div id="level-select" class="overlay-screen" style="display:none;">
         <div class="back-btn" onclick="backToMenu()">&#8592;</div>
-        <h2 style="color:gold">SELECT LEVEL</h2>
-        <div id="level-buttons"></div>
+        <h2 style="color:gold">SEVİYE SEÇ</h2>
+        <div id="level-buttons" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;"></div>
     </div>
 
     <!-- Store -->
     <div id="shop-screen" class="overlay-screen" style="display:none;">
         <div class="back-btn" onclick="backToMenu()">&#8592;</div>
-        <h2 style="color:gold">BALL STORE</h2>
+        <h2 style="color:gold">TOP MAĞAZASI</h2>
         <div id="shop-grid"></div>
     </div>
 
     <!-- Game HUD -->
-    <div id="top-right-ui">COINS: <span id="global-coins">0</span></div>
+    <div id="top-right-ui">ALTIN: <span id="global-coins">0</span></div>
     <div id="game-ui">
-        LEVEL: <span id="current-level-display">1</span> | 
-        STARS: <span id="score">0</span> / <span id="target-score">10</span>
+        SEVİYE: <span id="current-level-display">1</span> | 
+        YILDIZLAR: <span id="score">0</span> / <span id="target-score">10</span>
+    </div>
+
+    <!-- Ability HUD -->
+    <div id="ability-hud" style="display: none;">
+        <div class="ability-box" id="abi-dash">
+            <span class="ability-key">1</span>
+            <span>DASH</span>
+            <div class="cooldown-overlay" id="cd-dash"></div>
+        </div>
+        <div class="ability-box" id="abi-shield">
+            <span class="ability-key">2</span>
+            <span>SHIELD</span>
+            <div class="cooldown-overlay" id="cd-shield"></div>
+        </div>
+        <div class="ability-box" id="abi-magnet">
+            <span class="ability-key">3</span>
+            <span>MAGNET</span>
+            <div class="cooldown-overlay" id="cd-magnet"></div>
+        </div>
+        <div class="ability-box" id="abi-slow">
+            <span class="ability-key">4</span>
+            <span>SLOW</span>
+            <div class="cooldown-overlay" id="cd-slow"></div>
+        </div>
     </div>
 
     <div id="message">
         <div id="msg-content"></div>
         <div style="margin-top:30px; display:flex; gap:10px; justify-content:center;">
-            <button id="next-lvl-btn" class="menu-btn" style="padding:10px 20px; font-size:18px;">NEXT LEVEL</button>
-            <button class="menu-btn secondary" style="padding:10px 20px; font-size:18px;" onclick="backToMenu()">LOBBY</button>
+            <button id="next-lvl-btn" class="menu-btn" style="padding:10px 20px; font-size:18px;">SONRAKİ</button>
+            <button class="menu-btn secondary" style="padding:10px 20px; font-size:18px;" onclick="backToMenu()">LOBİ</button>
         </div>
     </div>
 
@@ -132,7 +165,14 @@
         let stars = [], collectedStars = [], enemies = [], mazeWalls = [], iceProjectiles = [];
         let isFPS = false, isGameOver = false, isPaused = true;
 
-        // --- Store Data ---
+        // --- Ability State ---
+        const abilities = {
+            dash: { cd: 3, duration: 0.2, timer: 0, active: 0, lastUsed: 0 },
+            shield: { cd: 10, duration: 5, timer: 0, active: 0, lastUsed: 0, mesh: null },
+            magnet: { cd: 8, duration: 4, timer: 0, active: 0, lastUsed: 0, range: 15 },
+            slow: { cd: 12, duration: 3, timer: 0, active: 0, lastUsed: 0 }
+        };
+
         const ballSkins = [
             { id: 'classic', name: 'Classic', colors: ['#ffcc00', '#0044cc'], star: '#cc0000', price: 0 },
             { id: 'ruby', name: 'Ruby Strike', colors: ['#aa0000', '#330000'], star: '#ff0000', price: 100 },
@@ -169,6 +209,7 @@
 
         const BALL_RADIUS = 1.55; 
         const PLAYER_SPEED = 0.5; 
+        const DASH_MULTIPLIER = 3.5;
         const WALL_HEIGHT = 4.5;
         let offsetX, offsetZ;
         const keys = { w: false, a: false, s: false, d: false };
@@ -197,9 +238,16 @@
             document.body.appendChild(renderer.domElement);
 
             window.addEventListener('keydown', e => { 
-                const k = e.key.toLowerCase(); if(keys.hasOwnProperty(k)) keys[k] = true;
+                const k = e.key.toLowerCase(); 
+                if(keys.hasOwnProperty(k)) keys[k] = true;
                 if(e.code === 'Space') handleCameraToggle();
                 if(k === 'f') handleShoot();
+                
+                // Ability Keys
+                if(k === '1') useAbility('dash');
+                if(k === '2') useAbility('shield');
+                if(k === '3') useAbility('magnet');
+                if(k === '4') useAbility('slow');
             });
             window.addEventListener('keyup', e => { 
                 const k = e.key.toLowerCase(); if(keys.hasOwnProperty(k)) keys[k] = false;
@@ -212,7 +260,59 @@
             animate();
         }
 
-        // --- Navigation ---
+        // --- Abilities Logic ---
+        function useAbility(type) {
+            if (isPaused || isGameOver) return;
+            const abi = abilities[type];
+            const now = Date.now() / 1000;
+            
+            if (now - abi.lastUsed < abi.cd) return; // Cooldown Check
+
+            abi.lastUsed = now;
+            abi.active = abi.duration;
+            
+            // Visual feedback
+            const box = document.getElementById(`abi-${type}`);
+            box.classList.add('active');
+
+            if (type === 'shield') {
+                if (abilities.shield.mesh) player.add(abilities.shield.mesh);
+            }
+        }
+
+        function updateAbilities(dt) {
+            const now = Date.now() / 1000;
+            for (const key in abilities) {
+                const abi = abilities[key];
+                
+                // Active duration check
+                if (abi.active > 0) {
+                    abi.active -= dt;
+                    if (abi.active <= 0) {
+                        document.getElementById(`abi-${key}`).classList.remove('active');
+                        if (key === 'shield' && abi.mesh) player.remove(abi.mesh);
+                    }
+                }
+
+                // Cooldown UI update
+                const timeSinceUsed = now - abi.lastUsed;
+                const cdPercent = Math.max(0, 1 - (timeSinceUsed / abi.cd)) * 100;
+                document.getElementById(`cd-${key}`).style.height = cdPercent + "%";
+            }
+
+            // Magnet logic
+            if (abilities.magnet.active > 0) {
+                stars.forEach(star => {
+                    const dist = player.position.distanceTo(star.position);
+                    if (dist < abilities.magnet.range) {
+                        const pullDir = player.position.clone().sub(star.position).normalize();
+                        star.position.add(pullDir.multiplyScalar(0.8));
+                    }
+                });
+            }
+        }
+
+        // --- UI & Navigation ---
         function showLevelSelect() {
             document.getElementById('main-menu').style.display = 'none';
             document.getElementById('level-select').style.display = 'flex';
@@ -232,6 +332,7 @@
             document.getElementById('shop-screen').style.display = 'none';
             document.getElementById('message').style.display = 'none';
             document.getElementById('game-ui').style.display = 'none';
+            document.getElementById('ability-hud').style.display = 'none';
             document.getElementById('main-menu').style.display = 'flex';
         }
 
@@ -240,6 +341,7 @@
             isPaused = false;
             document.getElementById('level-select').style.display = 'none';
             document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('ability-hud').style.display = 'flex';
             setupGame();
         }
 
@@ -248,11 +350,10 @@
             container.innerHTML = '';
             levels.forEach((lvl, i) => {
                 const card = document.createElement('div');
-                card.className = 'lvl-card';
                 const isCompleted = completedLevels.includes(i + 1);
                 card.innerHTML = `
-                    <div class="lvl-status">${isCompleted ? 'COMPLETED' : ''}</div>
-                    <button class="menu-btn" style="min-width:140px; font-size:18px;">LVL ${i+1}</button>
+                    <div style="font-size:10px; color:#0f0; height:12px;">${isCompleted ? 'TAMAMLANDI' : ''}</div>
+                    <button class="menu-btn" style="min-width:120px; font-size:16px; padding:10px;">LVL ${i+1}</button>
                 `;
                 card.querySelector('button').onclick = () => startGame(i);
                 container.appendChild(card);
@@ -269,10 +370,10 @@
                 item.className = `shop-item ${isSelected ? 'selected' : ''}`;
                 item.innerHTML = `
                     <div class="ball-preview" style="background: linear-gradient(135deg, ${skin.colors[0]}, ${skin.colors[1]})"></div>
-                    <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${skin.name}</div>
-                    <span class="price-tag">${isUnlocked ? 'OWNED' : skin.price + ' Coins'}</span>
-                    <button class="menu-btn secondary" style="min-width:100px; font-size:14px; padding:8px 0;">
-                        ${isSelected ? 'EQUIPPED' : (isUnlocked ? 'EQUIP' : 'BUY')}
+                    <div style="font-weight:bold; font-size:12px;">${skin.name}</div>
+                    <div style="color:gold; font-size:12px; margin:5px 0;">${isUnlocked ? 'SAHİP' : skin.price}</div>
+                    <button class="menu-btn secondary" style="min-width:80px; font-size:12px; padding:5px;">
+                        ${isSelected ? 'SEÇİLİ' : (isUnlocked ? 'SEÇ' : 'AL')}
                     </button>
                 `;
                 item.querySelector('button').onclick = () => {
@@ -293,7 +394,7 @@
             });
         }
 
-        // --- Core Setup & Logic (Kalan kodlar öncekiyle aynı kalıyor) ---
+        // --- Core Setup & Logic ---
         function setupGame() {
             const lvl = levels[currentLevel-1];
             score = 0;
@@ -303,14 +404,21 @@
             document.getElementById('target-score').innerText = lvl.stars;
             document.getElementById('current-level-display').innerText = currentLevel;
             document.getElementById('message').style.display = "none";
+            
+            // Reset abilities
+            for(let k in abilities) { abilities[k].active = 0; abilities[k].lastUsed = 0; }
+            
             while(scene.children.length > 0){ scene.remove(scene.children[0]); }
+            
             scene.add(new THREE.AmbientLight(0xffcccc, 0.4));
             const pointLight = new THREE.PointLight(0xffffff, 1.5, 1500);
             pointLight.position.set(0, 200, 0);
             scene.add(pointLight);
+            
             stars = []; collectedStars = []; enemies = []; mazeWalls = []; iceProjectiles = [];
             offsetX = (baseMaze[0].length * lvl.grid) / 2;
             offsetZ = (baseMaze.length * lvl.grid) / 2;
+            
             createWorld(lvl);
             createPlayer();
             spawnItems(lvl);
@@ -319,12 +427,13 @@
 
         function createWorld(lvl) {
             const floorGeo = new THREE.PlaneGeometry(2000, 2000);
-            const floorMat = new THREE.MeshPhongMaterial({ color: 0x110000 }); 
+            const floorMat = new THREE.MeshPhongMaterial({ color: 0x110505 }); 
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
             scene.add(floor);
+            
             const wallGeo = new THREE.BoxGeometry(lvl.grid, WALL_HEIGHT, lvl.grid);
-            const wallMat = new THREE.MeshPhongMaterial({ color: 0x0000bb });
+            const wallMat = new THREE.MeshPhongMaterial({ color: 0x2222ff });
             for(let z = 0; z < baseMaze.length; z++) {
                 for(let x = 0; x < baseMaze[0].length; x++) {
                     if(baseMaze[z][x] === 1) {
@@ -351,31 +460,26 @@
             player = new THREE.Group();
             player.position.copy(getSafePos());
             scene.add(player);
+            
             playerBall = new THREE.Group();
             player.add(playerBall);
+            
             const skin = ballSkins.find(s => s.id === selectedSkin);
             const topMat = new THREE.MeshPhongMaterial({ color: skin.colors[0], shininess: 100 });
             const botMat = new THREE.MeshPhongMaterial({ color: skin.colors[1], shininess: 100 });
-            const starMat = new THREE.MeshPhongMaterial({ color: skin.star, shininess: 200 });
+            
             const upperSphere = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), topMat);
             const lowerSphere = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), botMat);
             playerBall.add(upperSphere, lowerSphere);
-            const starShape = new THREE.Shape();
-            const spikes = 5;
-            for (let i = 0; i < spikes * 2; i++) {
-                const r = i % 2 === 0 ? 0.8 : 0.35;
-                const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
-                if (i === 0) starShape.moveTo(Math.cos(a)*r, Math.sin(a)*r);
-                else starShape.lineTo(Math.cos(a)*r, Math.sin(a)*r);
-            }
-            const starMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(starShape, { depth: 0.1, bevelEnabled: false }), starMat);
-            starMesh.rotation.x = -Math.PI / 2;
-            starMesh.position.y = BALL_RADIUS - 0.05;
-            playerBall.add(starMesh);
+
+            // Shield Mesh (Hidden by default)
+            const sGeo = new THREE.SphereGeometry(BALL_RADIUS * 1.5, 32, 32);
+            const sMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3, wireframe: true });
+            abilities.shield.mesh = new THREE.Mesh(sGeo, sMat);
         }
 
         function spawnItems(lvl) {
-            const starGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.4, 32);
+            const starGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.3, 32);
             const starMat = new THREE.MeshPhongMaterial({ color: 0xffff00 });
             for(let i=0; i < lvl.stars; i++) {
                 const star = new THREE.Mesh(starGeo, starMat);
@@ -436,6 +540,9 @@
             if (isGameOver || isPaused || !player) return;
             const prev = player.position.clone();
             let move = new THREE.Vector3(0,0,0);
+            
+            const currentSpeed = (abilities.dash.active > 0) ? PLAYER_SPEED * DASH_MULTIPLIER : PLAYER_SPEED;
+
             if (isFPS) {
                 if (keys.w) move.z -= 1;
                 if (keys.s) move.z += 1;
@@ -456,15 +563,18 @@
                 }
             }
             if (move.length() > 0) {
-                move.normalize().multiplyScalar(PLAYER_SPEED);
+                move.normalize().multiplyScalar(currentSpeed);
                 player.position.x += move.x;
                 if (checkCollision(player.position)) player.position.x = prev.x;
                 player.position.z += move.z;
                 if (checkCollision(player.position)) player.position.z = prev.z;
+                
                 if (!player.position.equals(prev)) {
                     playerBall.rotation.x -= (player.position.distanceTo(prev)) / BALL_RADIUS;
                 }
             }
+
+            // Camera follow
             if (isFPS) {
                 camera.position.set(player.position.x, player.position.y + 1, player.position.z);
                 camera.quaternion.copy(player.quaternion);
@@ -474,6 +584,8 @@
                 camera.position.copy(currentCameraPos);
                 camera.lookAt(player.position.x, player.position.y, player.position.z);
             }
+
+            // Star collection
             for (let i = stars.length - 1; i >= 0; i--) {
                 if (player.position.distanceTo(stars[i].position) < 3.0) {
                     score++;
@@ -488,7 +600,9 @@
         }
 
         function updateEnemies(dt) {
-            const enemySpeed = 0.28 + (currentLevel * 0.03);
+            let enemySpeed = 0.28 + (currentLevel * 0.03);
+            if (abilities.slow.active > 0) enemySpeed *= 0.3; // Time Slow effect
+
             enemies.forEach(enemy => {
                 const ud = enemy.userData;
                 if (ud.frozen > 0) {
@@ -507,8 +621,21 @@
                     enemy.position.copy(prev);
                     ud.dir.applyAxisAngle(new THREE.Vector3(0,1,0), (Math.random() * Math.PI + Math.PI/2));
                 }
-                if (!isGameOver && enemy.position.distanceTo(player.position) < 3.0) gameOver();
+                
+                if (!isGameOver && enemy.position.distanceTo(player.position) < 3.0) {
+                    if (abilities.shield.active > 0) {
+                        // Shield Break
+                        abilities.shield.active = 0;
+                        document.getElementById('abi-shield').classList.remove('active');
+                        player.remove(abilities.shield.mesh);
+                        ud.frozen = 2.0; // Stun enemy briefly
+                    } else {
+                        gameOver();
+                    }
+                }
             });
+
+            // Projectiles
             for (let i = iceProjectiles.length - 1; i >= 0; i--) {
                 const p = iceProjectiles[i];
                 p.position.add(p.userData.vel);
@@ -529,7 +656,7 @@
                 localStorage.setItem('starball_completed', JSON.stringify(completedLevels));
             }
             const m = document.getElementById('message');
-            document.getElementById('msg-content').innerHTML = `<span style="color:gold">LEVEL ${currentLevel} COMPLETE!</span><br><span style="font-size:18px">Well done! You earned bonus coins.</span>`;
+            document.getElementById('msg-content').innerHTML = `<span style="color:gold">SEVİYE ${currentLevel} TAMAMLANDI!</span><br><span style="font-size:18px">Harika iş! Bonus altın kazandın.</span>`;
             const nextBtn = document.getElementById('next-lvl-btn');
             if (currentLevel < levels.length) {
                 nextBtn.style.display = "block";
@@ -541,7 +668,7 @@
         function gameOver() {
             isGameOver = true;
             const m = document.getElementById('message');
-            document.getElementById('msg-content').innerHTML = `<span style="color:#ff3333">GAME OVER</span><br><span style="font-size:18px">The enemy caught you!</span>`;
+            document.getElementById('msg-content').innerHTML = `<span style="color:#ff3333">OYUN BİTTİ</span><br><span style="font-size:18px">Düşman seni yakaladı!</span>`;
             document.getElementById('next-lvl-btn').style.display = "none";
             m.style.display = "block";
         }
@@ -549,8 +676,11 @@
         function animate() {
             requestAnimationFrame(animate);
             if (!isPaused) {
+                const dt = clock.getDelta();
                 updatePlayer();
-                updateEnemies(clock.getDelta());
+                updateEnemies(dt);
+                updateAbilities(dt);
+                
                 stars.forEach(s => s.rotation.y += 0.05);
                 for (let i = collectedStars.length - 1; i >= 0; i--) {
                     let cc = collectedStars[i];
@@ -558,6 +688,12 @@
                     cc.mesh.scale.multiplyScalar(0.9);
                     cc.life -= 0.05;
                     if (cc.life <= 0) { scene.remove(cc.mesh); collectedStars.splice(i, 1); }
+                }
+
+                // Shield rotation
+                if (abilities.shield.active > 0 && abilities.shield.mesh) {
+                    abilities.shield.mesh.rotation.y += 0.02;
+                    abilities.shield.mesh.rotation.z += 0.01;
                 }
             }
             renderer.render(scene, camera);
